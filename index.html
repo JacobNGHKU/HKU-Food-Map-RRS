@@ -227,7 +227,7 @@
 
         <div class="map-stage" id="mapStage">
           <img id="campusMap"
-               src="Map/Main-campus-Faculty-Induction-Talks-2025-scaled.jpg"
+               src="Main-campus-Faculty-Induction-Talks-2025-scaled.jpg"
                alt="HKU Main Campus Map" />
         </div>
 
@@ -251,11 +251,11 @@
       <span class="chip"><span class="dot vegetarian">🥗</span> Vegetarian</span>
       <span class="chip"><span class="dot vending">🥡</span> Vending</span>
       <span class="chip"><span class="dot" style="background:#f0ecff;">🍽️</span> Staff/Members only (Chinese + Western)</span>
-      <span class="chip"><span class="dot" style="background:#1f4ea3;color:#fff;">📍</span> I’m here (KKL)</span>
+      <span class="chip"><span class="dot" style="background:#1f4ea3;color:#fff;">📍</span> I’m here (RRS)</span>
     </div>
 
     <p class="note">
-      Walking time shown is from KKL Building.
+      Walking time shown is from RRS Building.
     </p>
   </section>
 
@@ -279,11 +279,11 @@
       {id:16, name:"Gourmet Asia", building:"Run Run Shaw Tower, Centennial Campus", location:"G/F", type:"asian", icon:"🍜", food:"Southeast Asia cuisine", walkMin:13, x:81.20, y:60.60},
       {id:17, name:"BIJAS Vegetarian", building:"Run Run Shaw Tower, Centennial Campus", location:"G/F", type:"vegetarian", icon:"🥗", food:"Vegetarian food (Chinese cuisine)", walkMin:13, x:81.68, y:61.01},
       {id:18, name:"The Good Bridge (Staff Only)", building:"Jockey Club Tower, Centennial Campus", location:"4/F", type:"western", icon:"🍽️", food:"Western food and Chinese food", walkMin:10, x:83.01, y:50.40, access:"Staff Only"},
-      {id:19, name:"Senior Common Room (SCR Club Members Only)", building:"KKL Building", location:"14-15/F", type:"western", icon:"🍽️", food:"Western food and Chinese food", walkMin:1, x:31.53, y:55.41, access:"SCR Club Members Only"}
+      {id:19, name:"Senior Common Room (SCR Club Members Only)", building:"RRS Building", location:"14-15/F", type:"western", icon:"🍽️", food:"Western food and Chinese food", walkMin:1, x:24.04, y:53.71, access:"SCR Club Members Only"}
     ];
 
-    // Fixed "I'm here" location (KKL)
-    const HERE = { x:31.53, y:55.41, yOffset:-1.2 };
+    // Fixed "I'm here" location (RRS)
+    const HERE = { x:24.04, y:56.28, yOffset:-1.2 };
 
     const mapSection = document.getElementById('mapSection');
     const mapStage = document.getElementById('mapStage');
@@ -336,7 +336,7 @@
         <p><strong>Type:</strong> ${r.type}</p>
         <p><strong>Food:</strong> ${r.food}</p>
         ${r.access ? `<p><strong>Access:</strong> ${r.access}</p>` : ''}
-        <p><strong>Walk from KKL:</strong> ${walkTimeHTML(r.walkMin)}</p>
+        <p><strong>Walk from RRS:</strong> ${walkTimeHTML(r.walkMin)}</p>
       `;
     }
 
@@ -429,8 +429,8 @@
       here.style.left = `${HERE.x}%`;
       here.style.top = `${HERE.y + HERE.yOffset}%`;
       here.innerHTML = '📍';
-      here.title = "I'm here (KKL Building)";
-      here.setAttribute('aria-label', "I'm here (KKL Building)");
+      here.title = "I'm here (RRS Building)";
+      here.setAttribute('aria-label', "I'm here (RRS Building)");
 
       here.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -441,7 +441,7 @@
 
         setTimeout(() => {
           openPopupNearElement(here, `
-            <h4>📍 You are at KKL Building</h4>
+            <h4>📍 You are at RRS Building</h4>
             <p>Use the map or restaurant list to explore nearby dining options.</p>
           `);
         }, 180);
@@ -465,7 +465,7 @@
           <div class="meta">${r.location}, ${r.building}</div>
           <div class="meta">${r.food}</div>
           ${r.access ? `<div class="meta"><strong>Access:</strong> ${r.access}</div>` : ''}
-          <div class="meta">${walkTimeHTML(r.walkMin)} walk from KKL</div>
+          <div class="meta">${walkTimeHTML(r.walkMin)} walk from RRS</div>
         `;
         btn.addEventListener('click', () => focusRestaurant(r));
         li.appendChild(btn);
