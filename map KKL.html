@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HKU Campus Map</title>
+  <style>
+    :root{
+      --bg:#f4f6fb;
+      --card:#ffffff;
+      --line:#d9e0ef;
+      --text:#1f2a44;
+      --blue:#1f4ea3;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:24px;
+      font-family:Arial, sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    h1{margin:0 0 16px}
+    h2{margin:0 0 12px}
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:16px;
+      max-width:1400px;
+      margin:auto;
+    }
+
+    .filter{
+      display:flex; flex-wrap:wrap; gap:8px;
+      align-items:center; margin-bottom:12px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      border:1px solid var(--line); border-radius:20px;
+      padding:6px 10px; background:#fff; font-size:14px;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.9fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 1000px){
+      .layout{ grid-template-columns: 1fr; }
+    }
+
+    /* MAP */
+    .map-wrap{
+      position:relative;
+      border:1px solid var(--line);
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .map-stage{
+      position:relative;
+      width:100%;
+      transform-origin:50% 50%;
+      transform:scale(1);
+      transition:transform .28s ease, transform-origin .18s ease;
+      will-change: transform, transform-origin;
+    }
+    .map-stage img{
+      width:100%;
+      height:auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+
+    .toolbar{
+      position:absolute;
+      top:10px; right:10px;
+      z-index:40;
+      display:flex; gap:8px;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:8px;
+      padding:6px 10px;
+      cursor:pointer;
+      font-size:13px;
+    }
+
+    .marker{
+      position:absolute;
+      transform:translate(-50%, -50%);
+      width:28px; height:28px;
+      border:none; border-radius:50%;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:15px; line-height:1;
+      box-shadow:0 2px 8px rgba(0,0,0,.25);
+      z-index:20;
+    }
+    .marker:hover{ transform:translate(-50%, -50%) scale(1.12); }
+    .marker.active{
+      outline:3px solid #1f4ea355;
+      box-shadow:0 0 0 6px #1f4ea322, 0 3px 12px rgba(0,0,0,.28);
+      z-index:25;
+    }
+
+    /* I'm here marker */
+    .marker.here{
+      background:#1f4ea3;
+      color:#fff;
+      border:2px solid #fff;
+      z-index:35;
+      cursor:pointer;
+      transform:translate(-50%, -62%);
+    }
+    .marker.here:hover{
+      transform:translate(-50%, -62%) scale(1.06);
+    }
+
+    /* type colors */
+    .canteen{ background:#fff4cc; }
+    .cafe{ background:#d9f4ff; }
+    .western{ background:#ffe0e0; }
+    .asian{ background:#efe2ff; }
+    .halal{ background:#e2ffe8; }
+    .vegetarian{ background:#e8fff8; }
+    .vending{ background:#fff0e6; }
+
+    .popup{
+      position:absolute;
+      min-width:250px;
+      max-width:320px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px;
+      box-shadow:0 8px 24px rgba(0,0,0,.2);
+      display:none;
+      z-index:50; /* above map-stage */
+      font-size:13px;
+    }
+    .popup h4{ margin:0 0 6px; font-size:15px; color:#0d2f6f; }
+    .popup p{ margin:4px 0; }
+
+    /* walk time badges */
+    .walk-time{
+      font-weight:700;
+      padding:2px 8px;
+      border-radius:999px;
+      display:inline-block;
+    }
+    .walk-green{ background:#e8f7ec; color:#1f7a3f; }  /* <=5 */
+    .walk-orange{ background:#fff3e6; color:#b86400; } /* 6-10 */
+    .walk-red{ background:#ffe9e9; color:#b42323; }    /* >10 */
+
+    /* LIST */
+    .list-panel{
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      display:flex;
+      flex-direction:column;
+      min-height:400px;
+    }
+    .list-header{
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      font-weight:700;
+      color:#0d2f6f;
+    }
+    .list{
+      list-style:none; margin:0; padding:0;
+      max-height:72vh; overflow:auto;
+    }
+    .list li{
+      border-bottom:1px solid #edf1fa;
+    }
+    .list button{
+      width:100%;
+      text-align:left;
+      border:none; background:#fff;
+      padding:10px 12px;
+      cursor:pointer;
+    }
+    .list button:hover{ background:#f7f9ff; }
+    .list button.active{ background:#eaf1ff; }
+    .name{ font-weight:700; font-size:14px; }
+    .meta{ font-size:12px; color:#56617a; margin-top:2px; }
+
+    .legend{
+      margin-top:12px;
+      display:flex; flex-wrap:wrap; gap:8px;
+    }
+    .dot{
+      width:18px; height:18px; border-radius:50%;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:12px;
+    }
+    .note{font-size:12px; color:#5a6785; margin-top:10px;}
+  </style>
+</head>
+<body>
+  <h1>HKU Campus Map</h1>
+
+  <section class="panel" id="mapSection">
+    <h2>HKU Main Campus Map (Food Map)</h2>
+
+    <div class="filter">
+      <strong>Filter:</strong>
+      <label class="chip"><input type="checkbox" value="all" checked> All</label>
+      <label class="chip"><input type="checkbox" value="canteen" checked> Canteen</label>
+      <label class="chip"><input type="checkbox" value="cafe" checked> Cafe</label>
+      <label class="chip"><input type="checkbox" value="western" checked> Western</label>
+      <label class="chip"><input type="checkbox" value="asian" checked> Asian</label>
+      <label class="chip"><input type="checkbox" value="halal" checked> Halal</label>
+      <label class="chip"><input type="checkbox" value="vegetarian" checked> Vegetarian</label>
+      <label class="chip"><input type="checkbox" value="vending" checked> Vending</label>
+    </div>
+
+    <div class="layout">
+      <!-- LEFT: MAP -->
+      <div class="map-wrap" id="campusMapWrap">
+        <div class="toolbar">
+          <button class="btn" id="resetZoomBtn">Reset zoom</button>
+        </div>
+
+        <div class="map-stage" id="mapStage">
+          <img id="campusMap"
+               src="Map/Main-campus-Faculty-Induction-Talks-2025-scaled.jpg"
+               alt="HKU Main Campus Map" />
+        </div>
+
+        <!-- popup moved OUTSIDE map-stage -->
+        <div id="popup" class="popup"></div>
+      </div>
+
+      <!-- RIGHT: LIST -->
+      <aside class="list-panel">
+        <div class="list-header">Restaurant List (<span id="listCount">0</span>)</div>
+        <ul class="list" id="restaurantList"></ul>
+      </aside>
+    </div>
+
+    <div class="legend">
+      <span class="chip"><span class="dot canteen">🍱</span> Canteen</span>
+      <span class="chip"><span class="dot cafe">☕</span> Cafe</span>
+      <span class="chip"><span class="dot western">🥪</span> Western</span>
+      <span class="chip"><span class="dot asian">🍜</span> Asian</span>
+      <span class="chip"><span class="dot halal">🕌</span> Halal</span>
+      <span class="chip"><span class="dot vegetarian">🥗</span> Vegetarian</span>
+      <span class="chip"><span class="dot vending">🥡</span> Vending</span>
+      <span class="chip"><span class="dot" style="background:#f0ecff;">🍽️</span> Staff/Members only (Chinese + Western)</span>
+      <span class="chip"><span class="dot" style="background:#1f4ea3;color:#fff;">📍</span> I’m here (KKL)</span>
+    </div>
+
+    <p class="note">
+      Walking time shown is from KKL Building.
+    </p>
+  </section>
+
+  <script>
+    const restaurants = [
+      {id:1,  name:"Chong Yuet Ming Amenities Centre Restaurant & HK Daily", building:"Chong Yuet Ming Cultural Centre", location:"4/F", type:"canteen", icon:"🍱", food:"Local fast food and Chaa Chaan Teng", walkMin:3, x:16.60, y:34.70},
+      {id:2,  name:"Café 330", building:"Chong Yuet Ming Amenities Centre", location:"2/F", type:"cafe", icon:"☕", food:"Hot meal, salads, sandwiches and coffee", walkMin:3, x:17.75, y:34.85},
+      {id:3,  name:"Vending Hub", building:"Chong Yuet Ming Amenities Centre", location:"G/F", type:"vending", icon:"🥡", food:"Vending service for ready-to-eat box lunches, Chinese rice ball, Japanese rice ball, dessert, snacks, coffee and beverages", walkMin:3, x:17.13, y:35.17},
+      {id:4,  name:"Fong Shu Chuen Amenities Centre Restaurant", building:"Fong Shu Chuen Amenities Centre", location:"2/F", type:"asian", icon:"🍜", food:"Local fast food and Asian food", walkMin:3, x:16.20, y:59.95},
+      {id:5,  name:"27 Kebab House", building:"Fong Shu Chuen Amenities Centre", location:"1/F", type:"halal", icon:"🕌", food:"Halal food and beverages", walkMin:3, x:16.64, y:60.39},
+      {id:6,  name:"SUBWAY", building:"Run Run Shaw Podium", location:"Podium", type:"western", icon:"🥪", food:"Submarine sandwiches and beverages", walkMin:5, x:36.60, y:36.00},
+      {id:7,  name:"Kiosk by The Sandwich Club", building:"Run Run Shaw Podium", location:"Podium", type:"western", icon:"🥪", food:"Bento boxes, pastries, sandwiches and salads", walkMin:5, x:37.01, y:36.42},
+      {id:8,  name:"The Coffee Academics", building:"Library Building (Old Wing)", location:"G/F", type:"cafe", icon:"☕", food:"Specialty coffee, sandwiches and salads", walkMin:3, x:39.51, y:57.52},
+      {id:9,  name:"Union Restaurant", building:"Haking Wong Building", location:"4/F", type:"asian", icon:"🍜", food:"Local fast food and Asian food", walkMin:7, x:59.06, y:45.91},
+      {id:10, name:"Vending Nook", building:"Composite Building", location:"G/F", type:"vending", icon:"🥡", food:"24/7 vending service for ready-to-eat Japanese rice ball, dessert, snacks and beverages", walkMin:7, x:67.70, y:47.30},
+      {id:11, name:"Starbucks Coffee", building:"Composite Building", location:"G/F", type:"cafe", icon:"☕", food:"Coffee, pastries, sandwiches and salads", walkMin:7, x:68.10, y:48.50},
+      {id:12, name:"Tai Tai Foodtopia", building:"Composite Building", location:"G/F", type:"asian", icon:"🍜", food:"Taiwanese beverages, hot meals, noodles, desserts and snacks", walkMin:7, x:68.80, y:47.40},
+      {id:13, name:"OORI HANSIK", building:"Composite Building", location:"G/F", type:"asian", icon:"🍜", food:"Korean food, hot meals, fried chicken, snacks and coffee", walkMin:7, x:68.29, y:47.91},
+      {id:14, name:"Oliver’s Super Sandwiches", building:"The Jockey Club Tower, Centennial Campus", location:"LG/F", type:"western", icon:"🥪", food:"Sandwiches, baked potato, pasta, salad and coffee", walkMin:10, x:82.55, y:49.95},
+      {id:15, name:"alfafa café", building:"The Jockey Club Tower, Centennial Campus", location:"G/F", type:"cafe", icon:"☕", food:"Pasta, sandwiches, salads, pastries and specialty coffee", walkMin:10, x:83.01, y:50.40},
+      {id:16, name:"Gourmet Asia", building:"Run Run Shaw Tower, Centennial Campus", location:"G/F", type:"asian", icon:"🍜", food:"Southeast Asia cuisine", walkMin:13, x:81.20, y:60.60},
+      {id:17, name:"BIJAS Vegetarian", building:"Run Run Shaw Tower, Centennial Campus", location:"G/F", type:"vegetarian", icon:"🥗", food:"Vegetarian food (Chinese cuisine)", walkMin:13, x:81.68, y:61.01},
+      {id:18, name:"The Good Bridge (Staff Only)", building:"Jockey Club Tower, Centennial Campus", location:"4/F", type:"western", icon:"🍽️", food:"Western food and Chinese food", walkMin:10, x:83.01, y:50.40, access:"Staff Only"},
+      {id:19, name:"Senior Common Room (SCR Club Members Only)", building:"KKL Building", location:"14-15/F", type:"western", icon:"🍽️", food:"Western food and Chinese food", walkMin:1, x:31.53, y:55.41, access:"SCR Club Members Only"}
+    ];
+
+    // Fixed "I'm here" location (KKL)
+    const HERE = { x:31.53, y:55.41, yOffset:-1.2 };
+
+    const mapSection = document.getElementById('mapSection');
+    const mapStage = document.getElementById('mapStage');
+    const mapWrap = document.getElementById('campusMapWrap');
+    const popup = document.getElementById('popup');
+    const list = document.getElementById('restaurantList');
+    const listCount = document.getElementById('listCount');
+    const checks = document.querySelectorAll('.filter input[type="checkbox"]');
+    const allBox = document.querySelector('.filter input[value="all"]');
+
+    const markerById = new Map();
+    const listBtnById = new Map();
+
+    let hereMarkerEl = null;
+    let activeAnchorEl = null; // for popup reposition after zoom
+    let currentScale = 1;
+    let currentOrigin = { x:50, y:50 };
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 3;
+
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+    function applyZoom(){
+      mapStage.style.transformOrigin = `${currentOrigin.x}% ${currentOrigin.y}%`;
+      mapStage.style.transform = `scale(${currentScale})`;
+    }
+
+    function zoomToPoint(xPercent, yPercent, scale=1.8){
+      currentOrigin.x = clamp(xPercent, 0, 100);
+      currentOrigin.y = clamp(yPercent, 0, 100);
+      currentScale = clamp(scale, MIN_SCALE, MAX_SCALE);
+      applyZoom();
+    }
+
+    function walkColorClass(min){
+      if (min <= 5) return 'walk-green';
+      if (min <= 10) return 'walk-orange';
+      return 'walk-red';
+    }
+
+    function walkTimeHTML(min){
+      return `<span class="walk-time ${walkColorClass(min)}">🚶 ${min} min</span>`;
+    }
+
+    function markerHTML(r){
+      return `
+        <h4>${r.id}. ${r.name}</h4>
+        <p><strong>Building:</strong> ${r.building}</p>
+        <p><strong>Location:</strong> ${r.location}</p>
+        <p><strong>Type:</strong> ${r.type}</p>
+        <p><strong>Food:</strong> ${r.food}</p>
+        ${r.access ? `<p><strong>Access:</strong> ${r.access}</p>` : ''}
+        <p><strong>Walk from KKL:</strong> ${walkTimeHTML(r.walkMin)}</p>
+      `;
+    }
+
+    function clearActive(){
+      document.querySelectorAll('.marker.active').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.list button.active').forEach(el => el.classList.remove('active'));
+    }
+
+    // popup anchored to actual marker position on screen (handles zoom correctly)
+    function openPopupNearElement(anchorEl, html){
+      if (!anchorEl) return;
+      popup.innerHTML = html;
+      popup.style.display = 'block';
+
+      const wrapRect = mapWrap.getBoundingClientRect();
+      const aRect = anchorEl.getBoundingClientRect();
+
+      // anchor center relative to map-wrap
+      const x = (aRect.left - wrapRect.left) + (aRect.width / 2);
+      const y = (aRect.top - wrapRect.top) + (aRect.height / 2);
+
+      const pad = 8;
+      const gap = 12;
+      const popupW = popup.offsetWidth;
+      const popupH = popup.offsetHeight;
+
+      let left = x + gap;   // default right side
+      let top = y - 10;
+
+      // flip left if overflow right
+      if (left + popupW > wrapRect.width - pad) {
+        left = x - popupW - gap;
+      }
+
+      // horizontal clamp
+      if (left < pad) left = pad;
+      if (left + popupW > wrapRect.width - pad) {
+        left = wrapRect.width - popupW - pad;
+      }
+
+      // vertical clamp
+      if (top < pad) top = pad;
+      if (top + popupH > wrapRect.height - pad) {
+        top = wrapRect.height - popupH - pad;
+      }
+
+      popup.style.left = `${left}px`;
+      popup.style.top = `${top}px`;
+
+      activeAnchorEl = anchorEl;
+    }
+
+    function focusRestaurant(r){
+      clearActive();
+      const marker = markerById.get(r.id);
+      const listBtn = listBtnById.get(r.id);
+      if (marker) marker.classList.add('active');
+      if (listBtn) listBtn.classList.add('active');
+
+      mapSection.scrollIntoView({ behavior:'smooth', block:'start' });
+      zoomToPoint(r.x, r.y, 1.8);
+
+      // show popup after zoom motion starts for better placement
+      setTimeout(() => openPopupNearElement(marker, markerHTML(r)), 180);
+    }
+
+    function createMarker(r){
+      const btn = document.createElement('button');
+      btn.className = `marker ${r.type}`;
+      btn.style.left = r.x + '%';
+      btn.style.top = r.y + '%';
+      btn.innerHTML = r.icon;
+      btn.dataset.type = r.type;
+      btn.dataset.id = r.id;
+      btn.title = r.name;
+      btn.setAttribute('aria-label', r.name);
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        focusRestaurant(r);
+      });
+
+      markerById.set(r.id, btn);
+      mapStage.appendChild(btn);
+    }
+
+    function createHereMarker(){
+      const here = document.createElement('button');
+      here.className = 'marker here';
+      here.style.left = `${HERE.x}%`;
+      here.style.top = `${HERE.y + HERE.yOffset}%`;
+      here.innerHTML = '📍';
+      here.title = "I'm here (KKL Building)";
+      here.setAttribute('aria-label', "I'm here (KKL Building)");
+
+      here.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearActive();
+
+        mapSection.scrollIntoView({ behavior:'smooth', block:'start' });
+        zoomToPoint(HERE.x, HERE.y, 2.0);
+
+        setTimeout(() => {
+          openPopupNearElement(here, `
+            <h4>📍 You are at KKL Building</h4>
+            <p>Use the map or restaurant list to explore nearby dining options.</p>
+          `);
+        }, 180);
+      });
+
+      hereMarkerEl = here;
+      mapStage.appendChild(here);
+    }
+
+    function createList(){
+      list.innerHTML = '';
+      listBtnById.clear();
+
+      restaurants.forEach(r => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.dataset.type = r.type;
+        btn.dataset.id = r.id;
+        btn.innerHTML = `
+          <div class="name">${r.icon} ${r.id}. ${r.name}</div>
+          <div class="meta">${r.location}, ${r.building}</div>
+          <div class="meta">${r.food}</div>
+          ${r.access ? `<div class="meta"><strong>Access:</strong> ${r.access}</div>` : ''}
+          <div class="meta">${walkTimeHTML(r.walkMin)} walk from KKL</div>
+        `;
+        btn.addEventListener('click', () => focusRestaurant(r));
+        li.appendChild(btn);
+        list.appendChild(li);
+        listBtnById.set(r.id, btn);
+      });
+    }
+
+    function selectedTypes(){
+      const allChecked = allBox.checked;
+      const chosen = [...checks]
+        .filter(c => c.checked && c.value !== 'all')
+        .map(c => c.value);
+      return { allChecked, chosen };
+    }
+
+    function applyFilter(){
+      const { allChecked, chosen } = selectedTypes();
+      let visibleCount = 0;
+
+      restaurants.forEach(r => {
+        const show = allChecked || chosen.includes(r.type);
+        const marker = markerById.get(r.id);
+        const liBtn = listBtnById.get(r.id);
+
+        if (marker) marker.style.display = show ? 'flex' : 'none';
+        if (liBtn) liBtn.closest('li').style.display = show ? 'block' : 'none';
+        if (show) visibleCount++;
+      });
+
+      listCount.textContent = visibleCount;
+      popup.style.display = 'none';
+      activeAnchorEl = null;
+      clearActive();
+    }
+
+    checks.forEach(c => {
+      c.addEventListener('change', (e) => {
+        if (e.target.value === 'all') {
+          checks.forEach(x => x.checked = e.target.checked);
+        } else {
+          const nonAll = [...checks].filter(x => x.value !== 'all');
+          allBox.checked = nonAll.every(x => x.checked);
+        }
+        applyFilter();
+      });
+    });
+
+    document.getElementById('resetZoomBtn').addEventListener('click', () => {
+      currentScale = 1;
+      currentOrigin = {x:50, y:50};
+      applyZoom();
+      popup.style.display = 'none';
+      activeAnchorEl = null;
+      clearActive();
+    });
+
+    // Mouse wheel zoom in/out (zoom toward cursor)
+    mapWrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+
+      const rect = mapStage.getBoundingClientRect();
+      const xPct = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
+      const yPct = clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100);
+
+      const step = 0.18;
+      const direction = e.deltaY < 0 ? 1 : -1;
+      const nextScale = clamp(currentScale + direction * step, MIN_SCALE, MAX_SCALE);
+
+      currentOrigin = { x:xPct, y:yPct };
+      currentScale = nextScale;
+      applyZoom();
+
+      // keep popup attached to marker if currently open
+      if (popup.style.display === 'block' && activeAnchorEl) {
+        requestAnimationFrame(() => openPopupNearElement(activeAnchorEl, popup.innerHTML));
+      }
+    }, { passive:false });
+
+    // close popup on empty map click
+    mapWrap.addEventListener('click', (e) => {
+      if (e.target.classList.contains('marker')) return;
+      if (popup.contains(e.target)) return;
+      popup.style.display = 'none';
+      activeAnchorEl = null;
+      clearActive();
+    });
+
+    // hide popup on page scroll (as in your original)
+    document.addEventListener('scroll', () => {
+      popup.style.display = 'none';
+      activeAnchorEl = null;
+    });
+
+    // reposition popup after zoom transition / window resize
+    mapStage.addEventListener('transitionend', () => {
+      if (popup.style.display === 'block' && activeAnchorEl) {
+        openPopupNearElement(activeAnchorEl, popup.innerHTML);
+      }
+    });
+    window.addEventListener('resize', () => {
+      if (popup.style.display === 'block' && activeAnchorEl) {
+        openPopupNearElement(activeAnchorEl, popup.innerHTML);
+      }
+    });
+
+    // helper: click map image to get % coordinates in console
+    document.getElementById('campusMap').addEventListener('click', function(e){
+      const rect = this.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
+      const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
+      console.log(`x:${x}, y:${y}`);
+    });
+
+    // init
+    restaurants.forEach(createMarker);
+    createHereMarker();
+    createList();
+    applyFilter();
+    applyZoom();
+  </script>
+</body>
+</html>
