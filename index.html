@@ -411,6 +411,11 @@
         display:block;
         min-height:auto;
       }
+      .marker.route-station{
+        width:22px;
+        height:22px;
+        font-size:13px;
+      }
       .mobile-tabs{
         display:flex;
       }
@@ -1040,6 +1045,7 @@
     function createMarker(p){
       const m = document.createElement('button');
       m.className = 'marker poi';
+      m.className = 'marker poi route-station';
       m.style.left = p.x + '%';
       m.style.top = p.y + '%';
       m.innerHTML = p.icon;
