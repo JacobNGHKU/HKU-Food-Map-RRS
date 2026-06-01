@@ -1381,12 +1381,13 @@
       resetZoomBtn.textContent = t('resetZoom');
       mapTabBtn.textContent = t('mapTab');
       listTabBtn.textContent = t('listTab');
-      routeFromSypBtn.textContent = t('routeFromSyp');
+
+      routeFromSypBtn?.textContent = t('routeFromSyp');   // changed
       routeFromHkuBtn.textContent = t('routeFromHku');
       drawerHandle.textContent = t('drawerHandle');
 
       stationPromptTitle.textContent = t('promptTitle');
-      stationSypBtn.textContent = t('promptSyp');
+      stationSypBtn?.textContent = t('promptSyp');        // changed
       stationHkuBtn.textContent = t('promptHku');
       cancelStationPrompt.textContent = t('cancel');
 
